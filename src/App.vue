@@ -14,6 +14,7 @@
                 <div style="min-height: 100px;">
                     <v-container><v-row><v-col>
                         <v-text-field label="Filename" v-model="filename" hide-details :rules="rules.filename"></v-text-field>
+                        <v-switch label="Save as text" v-model="outputText" dense hide-details></v-switch>
                         <v-btn icon @click="saveBoard" :disabled="filename.length == 0" style="float: right; margin-top: 5px; margin-bottom: -5px;"><v-icon>mdi-download</v-icon></v-btn>
                     </v-col></v-row></v-container>
                 </div>
@@ -85,6 +86,9 @@
 </template>
 
 <script>
+// CONTACT thenamor2@gmail.com FOR QUESTIONS
+// Please mention "RecursiveFunctions" in the subject
+
 import ZeroFunc from './components/ZeroFunc.vue';
 import SuccFunc from './components/SuccFunc.vue';
 import IdFunc from './components/IdFunc.vue';
@@ -359,6 +363,7 @@ export default {
         },
         outputs: [],
         outputDialog: false,
+        outputText: false,
         filename: "",
         saveDialog: false,
         file: undefined,
@@ -476,7 +481,6 @@ export default {
             }
             try {
                 this.outputs = this.getInputs(1, 0)
-                console.log(this.outputs)
                 this.funcs.forEach(func => {
                     func.inputs = []
                     func.y0 = undefined
@@ -617,6 +621,133 @@ export default {
             }
             return x[m-1]
         },
+        runText() {
+            this.syncConnections()
+            return this.getText(1, 0)
+        },
+        getText(funcId, index) {
+            let func = this.funcById[funcId]
+            const component = this.$refs["funccomponent" + func.id][0]
+            let out = ""
+            if (funcId == 0) {
+                return "x" + (index+1)
+            }
+            if (func.component == "CompositionFunc") {
+                out = ""
+                return this.getText(func.inputs[index].source, func.inputs[index].outputInd)
+            } else if (func.component == "PrimitiveRecursion") {
+                // Get true output
+                if (index == 0) {
+                    let first = this.getText(func.inputs[0].source, func.inputs[0].outputInd)
+                    let second = this.getText(func.inputs[1].source, func.inputs[1].outputInd)
+                    if (first.includes("from")) {
+                        first = first.slice(6)
+                    }
+                    if (second.includes("from")) {
+                        second = second.slice(6)
+                    }
+                    out = "Pr[" +
+                        first +
+                        "," +
+                        second +
+                        "]("
+                    let inputs = []
+                    for (let i=3; i<func.inputs.length; i++) {
+                        inputs.push(this.getText(func.inputs[i].source, func.inputs[i].outputInd))
+                    }
+                    inputs.push(this.getText(func.inputs[2].source, func.inputs[2].outputInd))
+                    if (inputs.every(input => input.includes("from"))) {
+                        return "Pr[" + first + "," + second + "]"
+                    }
+                    inputs.forEach((input, i) => {
+                        if (input.includes("from")) {
+                            out = out + input.slice(6)
+                        } else {
+                            out = out + input
+                        }
+                        if (i+1 != inputs.length) {
+                            out = out + ", "
+                        }
+                    })
+                    return out + ")"
+                }
+                // Get y-0 outputs
+                if (index % 2 == 0) {
+                    if (index == 2) {
+                        return "fromPrid[" + (func.inputs.length-2) + "," + (func.inputs.length-2) + "]"
+                    } else {
+                        return "fromPrid[" + (func.inputs.length-2) + "," + (index/2-2+1) + "]"
+                    }
+                }
+                // Get y>0 outputs
+                if (index == 3) {
+                    return "fromPrid[" + (func.inputs.length-1) + "," + (func.inputs.length-1) + "]"
+                } else if (index == 1) {
+                    return "fromPrid[" + (func.inputs.length-1) + "," + (func.inputs.length-2) + "]"
+                } else if (index % 2 == 1) {
+                    return "fromPrid[" + (func.inputs.length-1) + "," + (Math.floor(index/2)-2+1) + "]"
+                }
+            } else if (func.component == "MinimizationFunc") {
+                if (index == 0) {  // Get true output
+                    let first = this.getText(func.inputs[0].source, func.inputs[0].outputInd)
+                    if (first.includes("from")) {
+                        first = first.slice(6)
+                    }
+                    out = "Mn[" +
+                        first +
+                        "]("
+                    for (let i=1; i<func.inputs.length; i++) {
+                        out = out + this.getText(func.inputs[i].source, func.inputs[i].outputInd) + (i+1 == func.inputs.length ? "" : ", ")
+                    }
+                    return out + ")"
+                } else if (index == 1) {    // Get y
+                    return "fromMnid[" + func.inputs.length + "," + (func.inputs.length-1) + "]"
+                } else if (index > 1) {     // Get xs
+                    return "fromPrid[" + func.inputs.length + "," + (index-2+1) + "]"
+                }
+            } else {
+                let inputs = []
+                func.inputs.forEach(inputId => {
+                    inputs.push(this.getText(inputId.source, inputId.outputInd))
+                })
+                switch (func.component) {
+                    case "ZeroFunc":
+                        if (inputs[0].includes("from")) {
+                            inputs[0] = inputs[0].slice(6)
+                        }
+                        return "z(" + inputs[0] + ")"
+                    case "SuccFunc":
+                        if (inputs[0].includes("from")) {
+                            inputs[0] = inputs[0].slice(6)
+                        }
+                        return "s(" + inputs[0] + ")"
+                    case "IdFunc":
+                        if (inputs.every(input => input.includes("from"))) {
+                            return "id[" + component.n + "," + component.m + "]"
+                        }
+                        out = "id[" + component.n + "," + component.m + "]("
+                        inputs.forEach((input, i) => {
+                            if (input.includes("from")) {
+                                out = out + input.slice(6)
+                            } else {
+                                out = out + input
+                            }
+                            if (i+1 != inputs.length) {
+                                out = out + ","
+                            }
+                        })
+                        return out + ")"
+                    default:
+                        if (inputs.length == 0) {
+                            return ""
+                        }
+                        if (inputs.length == 1) {
+                            return inputs[0]
+                        }
+                        return inputs
+                }
+            }
+        },
         getBoard() {
             this.syncConnections()
             this.syncPositions()
@@ -678,9 +809,19 @@ export default {
             })
         },
         saveBoard() {
-            const filename = this.filename + ".rfuncs"
-            const boardData = this.getBoard()
-            var file = new Blob([JSON.stringify(boardData)], {type: "text/plain"})
+            let filename
+            let boardData
+            var file
+            if (!this.outputText) {
+                filename = this.filename + ".rfuncs"
+                boardData = this.getBoard()
+                file = new Blob([JSON.stringify(boardData)], {type: "text/plain"})
+            } else {
+                filename = this.filename + ".txt"
+                boardData = this.runText()
+                file = new Blob([boardData], {type: "text/plain"})
+            }
+            
             if (window.navigator.msSaveOrOpenBlob) // IE10+
                 window.navigator.msSaveOrOpenBlob(file, filename)
             else { // Others
