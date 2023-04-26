@@ -3,25 +3,17 @@
         {{ n }} inputs
         <v-btn x-small icon @click="addVal()"><v-icon>mdi-plus</v-icon></v-btn>
         <v-btn x-small icon @click="removeVal()" :disabled="values.length == 1"><v-icon>mdi-minus</v-icon></v-btn>
-        <v-btn small @click="dialog=true" style="margin-bottom: 10px;">Input</v-btn>
-        <div v-for="(val, i) in values" :key="'D'+i">{{ val.value }}</div>
-        <v-dialog v-model="dialog" width="200px"><v-card>
-            <v-card-title><div style="margin: auto">
-                {{ n }} inputs
-                <v-btn x-small icon @click="addVal()"><v-icon>mdi-plus</v-icon></v-btn>
-                <v-btn x-small icon @click="removeVal()" :disabled="values.length == 1"><v-icon>mdi-minus</v-icon></v-btn>
-            </div></v-card-title>
-            <v-container><v-row><v-col>
-                <v-text-field
-                    v-for="(val, i) in values"
-                    :label="'Input ' + (i+1)"
-                    v-model="val.value"
-                    :key="'C'+i"
-                    type="number"
-                    :rules="rules.noNeg"
-                ></v-text-field>
-            </v-col></v-row></v-container>
-        </v-card></v-dialog>
+        <v-text-field
+            v-for="(val, i) in values"
+            v-model="val.value"
+            :key="'C'+i"
+            type="number"
+            :rules="rules.noNeg"
+            hide-details
+            dense
+            style="width: 80px; margin-top: 0px; margin-left: 20px; height: 30px"
+            class="shrink"
+        ></v-text-field>
     </div>
 </template>
 
@@ -56,7 +48,7 @@ export default {
             this.jsplumb.addEndpoint(this.drag, {
                 isSource: true,
                 isTarget: false,
-                anchor: [1, 0, 1, 0, 0, 85],
+                anchor: [1, 0, 1, 0, 0, 47],
                 endpoint: ["Rectangle", {height: 15, width: 25}],
                 connectorOverlays:[
                     [ "Arrow", { location: 1, id:"arrow", foldback: 1 } ],
@@ -74,9 +66,9 @@ export default {
         n: 1,
         values: [{ value: "0"}],
         dialog: false,
-        height: 70,
+        height: 32,
         rules: {
-            noNeg: [v => v >= 0 || "Natural Numbers Only"]
+            noNeg: [v => (v >= 0 && Math.floor(v) == v) || "< 0"]
         }
     }),
 
@@ -87,7 +79,7 @@ export default {
             this.jsplumb.addEndpoint(this.drag, {
                 isSource: true,
                 isTarget: false,
-                anchor: [1, 0, 1, 0, 0, 55+30*this.n],
+                anchor: [1, 0, 1, 0, 0, 17+30*this.n],
                 endpoint: ["Rectangle", {height: 15, width: 25}],
                 connectorOverlays:[
                     [ "Arrow", { location: 1, id:"arrow", foldback: 1 } ],
@@ -130,7 +122,7 @@ export default {
     width: 120px;
     text-align: center;
     line-height: 30px;
-    background-color: grey;
+    background-color: lightgray;
 }
 
 </style>
